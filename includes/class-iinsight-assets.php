@@ -42,9 +42,5 @@ class Iinsight_Assets {
 			]
 		);
 
-		Iinsight_Logger::debug( 'Front-end script enqueued.', [
-			'debug_mode' => $is_debug,
-			'ajaxurl'    => admin_url( 'admin-ajax.php' ),
-		] );
 	}
 }

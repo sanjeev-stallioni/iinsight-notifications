@@ -24,28 +24,15 @@ class Iinsight_Ajax {
 
 	public static function handle(): void {
 
-		Iinsight_Logger::debug( 'AJAX handler triggered.', [
-			'action'       => $_POST['action'] ?? '(none)',
-			'has_nonce'    => ! empty( $_POST['nonce'] ),
-			'ip'           => self::ip(),
-			'method'       => $_SERVER['REQUEST_METHOD'] ?? '(unknown)',
-			'content_type' => $_SERVER['CONTENT_TYPE'] ?? '(unknown)',
-			'post_fields'  => array_keys( $_POST ),
-		] );
-
 		// 1. Nonce check
 		if ( ! check_ajax_referer( self::NONCE, 'nonce', false ) ) {
-			Iinsight_Logger::warning( 'AJAX rejected — bad nonce.', [
-				'ip'             => self::ip(),
-				'nonce_received' => sanitize_text_field( substr( $_POST['nonce'] ?? '', 0, 10 ) ) . '…',
-			] );
+			Iinsight_Logger::warning( 'AJAX rejected — bad nonce.', [ 'ip' => self::ip() ] );
 			wp_send_json_error( [ 'message' => 'Security check failed.' ], 403 );
 		}
 
 		// 2. Notifications enabled?
 		$opts = Iinsight_Admin::get_settings();
 		if ( $opts['enable_notifications'] !== '1' ) {
-			Iinsight_Logger::info( 'AJAX received but notifications are disabled in settings.' );
 			wp_send_json_error( [ 'message' => 'Notifications are disabled.' ], 200 );
 		}
 
@@ -58,19 +45,14 @@ class Iinsight_Ajax {
 		// 4. Sanitise input
 		$data = self::sanitise();
 		if ( is_wp_error( $data ) ) {
-			Iinsight_Logger::warning( 'Validation failed: ' . $data->get_error_message(), [
-				'ip'         => self::ip(),
-				'raw_first'  => sanitize_text_field( $_POST['first_name'] ?? '(empty)' ),
-				'raw_email'  => sanitize_text_field( $_POST['email'] ?? '(empty)' ),
-			] );
+			Iinsight_Logger::warning( 'Validation failed: ' . $data->get_error_message(), [ 'ip' => self::ip() ] );
 			wp_send_json_error( [ 'message' => $data->get_error_message() ], 422 );
 		}
 
 		// 5. Log + send
-		Iinsight_Logger::info( 'Submission received — dispatching emails.', [
+		Iinsight_Logger::info( 'Submission received.', [
 			'name'  => trim( $data['first_name'] . ' ' . $data['last_name'] ),
 			'email' => $data['email'],
-			'phone' => $data['phone'] ?? '',
 			'ip'    => self::ip(),
 		] );
 

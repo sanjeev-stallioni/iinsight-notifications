@@ -18,12 +18,12 @@
 ( function () {
 	'use strict';
 
-	// ── Tiny logger — only prints when WP_DEBUG is true ──────────────────────
+	// ── Logger — only prints when debug is enabled in plugin settings ────────
 	var isDebug = iinsightVars.debug === 'true';
 	var log = {
-		info:  function( msg, data ) { if ( isDebug ) console.log(  '[iinsight] ' + msg, data || '' ); },
-		warn:  function( msg, data ) { if ( isDebug ) console.warn( '[iinsight] ' + msg, data || '' ); },
-		error: function( msg, data ) { console.error( '[iinsight] ' + msg, data || '' ); }
+		info:  function( msg ) { if ( isDebug ) console.log(  '[iinsight] ' + msg ); },
+		warn:  function( msg ) { if ( isDebug ) console.warn( '[iinsight] ' + msg ); },
+		error: function( msg ) { console.error( '[iinsight] ' + msg ); }
 	};
 
 	// ── Guards ───────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@
 		}
 
 		notificationSent = true;
-		log.info( 'Sending notification via ' + source + '.', data );
+		log.info( 'Sending notification (' + source + ') for ' + email );
 
 		var fd = new FormData();
 		fd.append( 'action',     iinsightVars.action );
@@ -111,10 +111,8 @@
 	XMLHttpRequest.prototype.send = function () {
 		var xhr = this;
 		if ( xhr._iinsightUrl.indexOf( 'api_referral' ) !== -1 ) {
-			log.info( 'Detected iinsight XHR call: ' + xhr._iinsightUrl );
 			xhr.addEventListener( 'load', function () {
 				if ( xhr.status >= 200 && xhr.status < 300 ) {
-					log.info( 'iinsight XHR succeeded (HTTP ' + xhr.status + ').' );
 					sendNotification( 'xhr-intercept' );
 				}
 			} );
@@ -129,10 +127,8 @@
 			var url = ( typeof input === 'string' ) ? input : ( input && input.url ? input.url : '' );
 			var promise = origFetch.apply( this, arguments );
 			if ( url.indexOf( 'api_referral' ) !== -1 ) {
-				log.info( 'Detected iinsight fetch call: ' + url );
 				promise.then( function ( response ) {
 					if ( response.ok ) {
-						log.info( 'iinsight fetch succeeded.' );
 						sendNotification( 'fetch-intercept' );
 					}
 				} ).catch( function () {} );
@@ -155,7 +151,6 @@
 
 		observer.observe( phase1, { attributes: true, attributeFilter: [ 'style' ] } );
 		observer.observe( phase2, { attributes: true, attributeFilter: [ 'style' ] } );
-		log.info( 'MutationObserver attached as fallback.' );
 	}
 
 	// ── Wait for iinsight to inject its DOM ──────────────────────────────────
@@ -174,13 +169,13 @@
 			return;
 		}
 
-		log.info( 'iinsight form detected. Attaching listeners.' );
+		log.info( 'Form detected.' );
 
 		// Capture form data on click — before iinsight validates and redirects
 		submitBtn.addEventListener( 'click', function () {
 			submitClicked = true;
 			capturedData  = captureFormData();
-			log.info( 'Submit button clicked — form data captured.', capturedData );
+			log.info( 'Submit clicked.' );
 		} );
 
 		// Attach MutationObserver as fallback
@@ -192,20 +187,12 @@
 		}
 	}
 
-	// ── Startup diagnostics ─────────────────────────────────────────────────
-	log.info( '=== iinsight Listener loaded ===', {
-		ajaxurl: iinsightVars.ajaxurl,
-		action:  iinsightVars.action,
-		debug:   iinsightVars.debug,
-		nonce:   iinsightVars.nonce ? iinsightVars.nonce.substring( 0, 6 ) + '…' : '(missing)',
-	} );
-
 	// ── Kick off after DOM is ready ──────────────────────────────────────────
+	log.info( 'Listener loaded.' );
+
 	if ( document.readyState === 'loading' ) {
-		log.info( 'DOM still loading — waiting for DOMContentLoaded.' );
 		document.addEventListener( 'DOMContentLoaded', function () { waitForForm( 0 ); } );
 	} else {
-		log.info( 'DOM already ready — starting form poll immediately.' );
 		waitForForm( 0 );
 	}
 

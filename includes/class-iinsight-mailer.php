@@ -21,26 +21,12 @@ class Iinsight_Mailer {
 	 * Send both emails. Called from the AJAX handler.
 	 */
 	public static function send_all( array $data ): array {
-		Iinsight_Logger::debug( 'Mailer::send_all called.', [
-			'first_name' => $data['first_name'] ?? '(empty)',
-			'last_name'  => $data['last_name']  ?? '(empty)',
-			'email'      => $data['email']       ?? '(empty)',
-		] );
-
 		// Configure SMTP once before any wp_mail() call
 		Iinsight_SMTP::init();
 
-		$user_result  = self::send_user_ack( $data );
-		$admin_result = self::send_admin_notification( $data );
-
-		Iinsight_Logger::debug( 'Mailer::send_all results.', [
-			'user_email'  => $user_result,
-			'admin_email' => $admin_result,
-		] );
-
 		return [
-			'user_email'  => $user_result,
-			'admin_email' => $admin_result,
+			'user_email'  => self::send_user_ack( $data ),
+			'admin_email' => self::send_admin_notification( $data ),
 		];
 	}
 
@@ -59,13 +45,6 @@ class Iinsight_Mailer {
 		$subj  = self::fill( $opts['user_email_subject'] ?: self::default_user_subject(), $ph );
 		$body  = self::fill( $opts['user_email_body']    ?: self::default_user_body(),    $ph );
 
-		Iinsight_Logger::debug( 'Sending user acknowledgement.', [
-			'to'      => $to,
-			'subject' => $subj,
-			'body_length' => strlen( $body ),
-			'headers' => self::headers(),
-		] );
-
 		$sent = wp_mail( $to, $subj, $body, self::headers() );
 
 		if ( $sent ) {
@@ -73,9 +52,7 @@ class Iinsight_Mailer {
 			return 'sent';
 		}
 
-		global $phpmailer;
-		$error = ( isset( $phpmailer ) && ! empty( $phpmailer->ErrorInfo ) ) ? $phpmailer->ErrorInfo : 'Unknown error';
-		Iinsight_Logger::error( 'User acknowledgement FAILED.', [ 'to' => $to, 'phpmailer_error' => $error ] );
+		Iinsight_Logger::error( 'User acknowledgement FAILED.', [ 'to' => $to ] );
 		return 'failed';
 	}
 
@@ -91,13 +68,6 @@ class Iinsight_Mailer {
 		$subj = self::fill( $opts['admin_email_subject'] ?: self::default_admin_subject(), $ph );
 		$body = self::fill( $opts['admin_email_body']    ?: self::default_admin_body(),    $ph );
 
-		Iinsight_Logger::debug( 'Sending admin notification.', [
-			'to'            => $to,
-			'subject'       => $subj,
-			'body_length'   => strlen( $body ),
-			'using_override' => ! empty( $opts['admin_email_override'] ),
-		] );
-
 		$sent = wp_mail( $to, $subj, $body, self::headers() );
 
 		if ( $sent ) {
@@ -105,9 +75,7 @@ class Iinsight_Mailer {
 			return 'sent';
 		}
 
-		global $phpmailer;
-		$error = ( isset( $phpmailer ) && ! empty( $phpmailer->ErrorInfo ) ) ? $phpmailer->ErrorInfo : 'Unknown error';
-		Iinsight_Logger::error( 'Admin notification FAILED.', [ 'to' => $to, 'phpmailer_error' => $error ] );
+		Iinsight_Logger::error( 'Admin notification FAILED.', [ 'to' => $to ] );
 		return 'failed';
 	}
 
