@@ -6,7 +6,8 @@
  * Subject and body are editable from the admin settings page.
  *
  * Supported placeholders: {first_name} {last_name} {full_name}
- *                         {email} {phone} {site_name} {date} {time}
+ *                         {email} {phone} {funding_type}
+ *                         {site_name} {date} {time}
  *
  * @package iinsight-notifications
  */
@@ -43,7 +44,7 @@ class Iinsight_Mailer {
 		$opts  = Iinsight_Admin::get_settings();
 		$ph    = self::placeholders( $data );
 		$subj  = self::fill( $opts['user_email_subject'] ?: self::default_user_subject(), $ph );
-		$body  = self::fill( $opts['user_email_body']    ?: self::default_user_body(),    $ph );
+		$body  = wpautop( self::fill( $opts['user_email_body'] ?: self::default_user_body(), $ph ) );
 
 		$sent = wp_mail( $to, $subj, $body, self::headers() );
 
@@ -66,7 +67,7 @@ class Iinsight_Mailer {
 
 		$ph   = self::placeholders( $data );
 		$subj = self::fill( $opts['admin_email_subject'] ?: self::default_admin_subject(), $ph );
-		$body = self::fill( $opts['admin_email_body']    ?: self::default_admin_body(),    $ph );
+		$body = wpautop( self::fill( $opts['admin_email_body'] ?: self::default_admin_body(), $ph ) );
 
 		$sent = wp_mail( $to, $subj, $body, self::headers() );
 
@@ -84,15 +85,23 @@ class Iinsight_Mailer {
 	public static function placeholders( array $data ): array {
 		$first = trim( $data['first_name'] ?? '' );
 		$last  = trim( $data['last_name']  ?? '' );
+		$funding = $data['ndis_funding'] ?? '';
+		$plan    = $data['plan_type']    ?? '';
+		$funding_display = $funding;
+		if ( $funding === 'Yes' && ! empty( $plan ) ) {
+			$funding_display = "Yes — $plan";
+		}
+
 		return [
-			'{first_name}' => $first ?: 'there',
-			'{last_name}'  => $last,
-			'{full_name}'  => trim( "$first $last" ) ?: 'Unknown',
-			'{email}'      => $data['email'] ?? 'N/A',
-			'{phone}'      => $data['phone'] ?? 'N/A',
-			'{site_name}'  => get_option( 'blogname' ),
-			'{date}'       => gmdate( 'Y-m-d' ),
-			'{time}'       => gmdate( 'H:i:s' ) . ' UTC',
+			'{first_name}'   => $first ?: 'there',
+			'{last_name}'    => $last,
+			'{full_name}'    => trim( "$first $last" ) ?: 'Unknown',
+			'{email}'        => $data['email'] ?? 'N/A',
+			'{phone}'        => $data['phone'] ?? 'N/A',
+			'{funding_type}' => $funding_display ?: 'N/A',
+			'{site_name}'    => get_option( 'blogname' ),
+			'{date}'         => gmdate( 'Y-m-d' ),
+			'{time}'         => gmdate( 'H:i:s' ) . ' UTC',
 		];
 	}
 
@@ -103,24 +112,47 @@ class Iinsight_Mailer {
 	// ── Default templates ─────────────────────────────────────────────────────
 
 	public static function default_user_subject(): string {
-		return 'Thank you for your NDIS enquiry – {site_name}';
+		return "Your CITTA Intake Has Been Received — Here's What Happens Next";
 	}
 
 	public static function default_user_body(): string {
-		return "Hi {first_name},\n\nThank you for submitting your NDIS referral form. We have received your details and a member of our team will be in touch with you shortly.\n\nIf you have any urgent questions in the meantime, please don't hesitate to contact us directly.\n\nKind regards,\n{site_name}";
+		return '<p>Hi {first_name},</p>
+<p>Thank you for taking the first step.</p>
+<p>We\'ve received your details and your request to access the CITTA System.</p>
+<p><strong>What happens next:</strong></p>
+<ul>
+<li>One of our team will contact you within 1 business day</li>
+<li>We\'ll understand your situation and support needs</li>
+<li>Guide you through the Citta Foundation Program</li>
+<li>Help you get started based on your funding pathway</li>
+</ul>
+<p>CITTA is designed to provide structured support and real progress, not just ongoing sessions.</p>
+<p>If you have any urgent questions, feel free to reply to this email.</p>
+<p>We look forward to speaking with you.</p>
+<p><strong>CITTA Team</strong><br />Structured Trauma Recovery System</p>';
 	}
 
 	public static function default_admin_subject(): string {
-		return 'New NDIS Form Submission – {site_name}';
+		return 'New Lead Submission — CITTA Intake';
 	}
 
 	public static function default_admin_body(): string {
-		return "A new NDIS referral form has been submitted.\n\n----------------------------\nName  : {full_name}\nEmail : {email}\nPhone : {phone}\nDate  : {date}\nTime  : {time}\n----------------------------\n\nPlease log in to iinsight to review and action this referral.";
+		return '<p>A new lead has been submitted via the CITTA intake form.</p>
+<p><strong>Lead Details:</strong></p>
+<ul>
+<li><strong>Name:</strong> {full_name}</li>
+<li><strong>Email:</strong> {email}</li>
+<li><strong>Phone:</strong> {phone}</li>
+<li><strong>Funding Type:</strong> {funding_type}</li>
+<li><strong>Date:</strong> {date}</li>
+<li><strong>Time:</strong> {time}</li>
+</ul>
+<p><strong>Please review and follow up with this lead within 24 hours.</strong></p>';
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private static function headers(): array {
-		return [ 'Content-Type: text/plain; charset=UTF-8' ];
+		return [ 'Content-Type: text/html; charset=UTF-8' ];
 	}
 }

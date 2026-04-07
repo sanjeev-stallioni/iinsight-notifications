@@ -94,9 +94,9 @@ class Iinsight_Admin {
 
 		// Email content
 		$clean['user_email_subject']  = sanitize_text_field(     $input['user_email_subject']  ?? '' );
-		$clean['user_email_body']     = sanitize_textarea_field( $input['user_email_body']     ?? '' );
+		$clean['user_email_body']     = wp_kses_post( $input['user_email_body']     ?? '' );
 		$clean['admin_email_subject'] = sanitize_text_field(     $input['admin_email_subject'] ?? '' );
-		$clean['admin_email_body']    = sanitize_textarea_field( $input['admin_email_body']    ?? '' );
+		$clean['admin_email_body']    = wp_kses_post( $input['admin_email_body']    ?? '' );
 
 		// Mail method
 		$clean['mail_method'] = in_array( $input['mail_method'] ?? '', [ 'wp_mail', 'smtp' ], true )
@@ -229,26 +229,37 @@ jQuery(function($){
 	$('input[name="iinsight_settings[mail_method]"]').on('change', toggleSmtp);
 	toggleSmtp();
 
-	/* ── Placeholder click-to-insert ─────────────────────────── */
+	/* ── Placeholder click-to-insert (supports wp_editor) ────── */
 	$(document).on('click', '.iinsight-ph-tag', function(){
 		var tag    = $(this).text();
 		var target = $(this).closest('.iinsight-ph-group').data('for');
-		var el     = document.getElementById(target);
-		if(!el) return;
-		var s = el.selectionStart, e2 = el.selectionEnd, v = el.value;
-		el.value = v.slice(0, s) + tag + v.slice(e2);
-		el.selectionStart = el.selectionEnd = s + tag.length;
-		el.focus();
+		var editor = typeof tinymce !== 'undefined' ? tinymce.get(target) : null;
+		if(editor && !editor.isHidden()){
+			editor.execCommand('mceInsertContent', false, tag);
+		} else {
+			var el = document.getElementById(target);
+			if(!el) return;
+			var s = el.selectionStart, e2 = el.selectionEnd, v = el.value;
+			el.value = v.slice(0, s) + tag + v.slice(e2);
+			el.selectionStart = el.selectionEnd = s + tag.length;
+			el.focus();
+		}
 	});
 
-	/* ── Reset email template ────────────────────────────────── */
+	/* ── Reset email template (supports wp_editor) ──────────── */
 	$('.iinsight-reset-tpl').on('click', function(){
 		if(!confirm('Reset to default? Your custom content will be lost.')) return;
 		var which = $(this).data('which');
 		$.post(ajaxurl, {action:'iinsight_reset_template', nonce:'{$nonce}', which:which}, function(r){
 			if(r.success){
 				$('#iinsight_' + which + '_subject').val(r.data.subject);
-				$('#iinsight_' + which + '_body').val(r.data.body);
+				var editorId = 'iinsight_' + which + '_body';
+				var editor   = typeof tinymce !== 'undefined' ? tinymce.get(editorId) : null;
+				if(editor && !editor.isHidden()){
+					editor.setContent(r.data.body);
+				} else {
+					$('#' + editorId).val(r.data.body);
+				}
 			}
 		});
 	});
@@ -468,8 +479,17 @@ JS;
 							</th>
 							<td>
 								<div class="iinsight-ph-group iinsight-ph-wrap" data-for="iinsight_user_body"><?php echo $ph_tags; // phpcs:ignore ?></div>
-								<textarea id="iinsight_user_body" class="iinsight-body"
-									name="<?php echo esc_attr( self::OPTION_NAME ); ?>[user_email_body]"><?php echo esc_textarea( $opts['user_email_body'] ?: Iinsight_Mailer::default_user_body() ); ?></textarea>
+								<?php wp_editor(
+									$opts['user_email_body'] ?: Iinsight_Mailer::default_user_body(),
+									'iinsight_user_body',
+									[
+										'textarea_name' => self::OPTION_NAME . '[user_email_body]',
+										'textarea_rows' => 12,
+										'media_buttons' => false,
+										'teeny'         => false,
+										'quicktags'     => true,
+									]
+								); ?>
 								<p>
 									<button type="button" class="button iinsight-reset-tpl" data-which="user">
 										↺ <?php esc_html_e( 'Reset to Default', 'iinsight-notifications' ); ?>
@@ -503,8 +523,17 @@ JS;
 							</th>
 							<td>
 								<div class="iinsight-ph-group iinsight-ph-wrap" data-for="iinsight_admin_body"><?php echo $ph_tags; // phpcs:ignore ?></div>
-								<textarea id="iinsight_admin_body" class="iinsight-body"
-									name="<?php echo esc_attr( self::OPTION_NAME ); ?>[admin_email_body]"><?php echo esc_textarea( $opts['admin_email_body'] ?: Iinsight_Mailer::default_admin_body() ); ?></textarea>
+								<?php wp_editor(
+									$opts['admin_email_body'] ?: Iinsight_Mailer::default_admin_body(),
+									'iinsight_admin_body',
+									[
+										'textarea_name' => self::OPTION_NAME . '[admin_email_body]',
+										'textarea_rows' => 12,
+										'media_buttons' => false,
+										'teeny'         => false,
+										'quicktags'     => true,
+									]
+								); ?>
 								<p>
 									<button type="button" class="button iinsight-reset-tpl" data-which="admin">
 										↺ <?php esc_html_e( 'Reset to Default', 'iinsight-notifications' ); ?>
@@ -755,7 +784,7 @@ JS;
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private static function placeholder_tags_html(): string {
-		$tags = [ '{first_name}', '{last_name}', '{full_name}', '{email}', '{phone}', '{site_name}', '{date}', '{time}' ];
+		$tags = [ '{first_name}', '{last_name}', '{full_name}', '{email}', '{phone}', '{funding_type}', '{site_name}', '{date}', '{time}' ];
 		$out  = '';
 		foreach ( $tags as $tag ) {
 			$out .= '<span class="iinsight-ph-tag" title="' . esc_attr__( 'Click to insert', 'iinsight-notifications' ) . '">'

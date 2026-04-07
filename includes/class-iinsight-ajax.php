@@ -65,10 +65,12 @@ class Iinsight_Ajax {
 	// ── Sanitise ──────────────────────────────────────────────────────────────
 
 	private static function sanitise() {
-		$first = sanitize_text_field( wp_unslash( $_POST['first_name'] ?? '' ) );
-		$last  = sanitize_text_field( wp_unslash( $_POST['last_name']  ?? '' ) );
-		$email = sanitize_email(      wp_unslash( $_POST['email']      ?? '' ) );
-		$phone = sanitize_text_field( wp_unslash( $_POST['phone']      ?? '' ) );
+		$first        = sanitize_text_field( wp_unslash( $_POST['first_name']   ?? '' ) );
+		$last         = sanitize_text_field( wp_unslash( $_POST['last_name']    ?? '' ) );
+		$email        = sanitize_email(      wp_unslash( $_POST['email']        ?? '' ) );
+		$phone        = sanitize_text_field( wp_unslash( $_POST['phone']        ?? '' ) );
+		$ndis_funding = sanitize_text_field( wp_unslash( $_POST['ndis_funding'] ?? '' ) );
+		$plan_type    = sanitize_text_field( wp_unslash( $_POST['plan_type']    ?? '' ) );
 
 		if ( empty( $first ) ) {
 			return new WP_Error( 'missing_field', 'First name is required.' );
@@ -77,9 +79,13 @@ class Iinsight_Ajax {
 			return new WP_Error( 'invalid_email', 'A valid email address is required.' );
 		}
 
-		return compact( 'first', 'last', 'email', 'phone' ) + [
-			'first_name' => $first,
-			'last_name'  => $last,
+		return [
+			'first_name'   => $first,
+			'last_name'    => $last,
+			'email'        => $email,
+			'phone'        => $phone,
+			'ndis_funding' => $ndis_funding,
+			'plan_type'    => $plan_type,
 		];
 	}
 
@@ -88,7 +94,7 @@ class Iinsight_Ajax {
 	private static function rate_limit_ok(): bool {
 		$key   = 'iinsight_rl_' . md5( self::ip() );
 		$count = (int) get_transient( $key );
-		if ( $count >= 5 ) return false;
+		if ( $count >= 200 ) return false;
 		set_transient( $key, $count + 1, HOUR_IN_SECONDS );
 		return true;
 	}

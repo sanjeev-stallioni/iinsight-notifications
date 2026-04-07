@@ -40,10 +40,12 @@
 	// ── Capture current form values ──────────────────────────────────────────
 	function captureFormData() {
 		return {
-			first_name: getVal( 'MEDIUM_TEXT_1' ),
-			last_name:  getVal( 'MEDIUM_TEXT_2' ),
-			email:      getVal( 'EMAIL_ADDRESS_1' ),
-			phone:      getVal( 'PHONE_NUMBER_1' )
+			first_name:    getVal( 'MEDIUM_TEXT_1' ),
+			last_name:     getVal( 'MEDIUM_TEXT_2' ),
+			email:         getVal( 'EMAIL_ADDRESS_1' ),
+			phone:         getVal( 'PHONE_NUMBER_1' ),
+			ndis_funding:  getVal( 'DROP_DOWN_2' ),
+			plan_type:     getVal( 'DROP_DOWN_1' )
 		};
 	}
 
@@ -74,10 +76,12 @@
 		var fd = new FormData();
 		fd.append( 'action',     iinsightVars.action );
 		fd.append( 'nonce',      iinsightVars.nonce );
-		fd.append( 'first_name', data.first_name );
-		fd.append( 'last_name',  data.last_name );
-		fd.append( 'email',      email );
-		fd.append( 'phone',      data.phone );
+		fd.append( 'first_name',   data.first_name );
+		fd.append( 'last_name',    data.last_name );
+		fd.append( 'email',        email );
+		fd.append( 'phone',        data.phone );
+		fd.append( 'ndis_funding', data.ndis_funding );
+		fd.append( 'plan_type',    data.plan_type );
 
 		// sendBeacon survives page navigation (redirect to completion_url)
 		if ( navigator.sendBeacon ) {
