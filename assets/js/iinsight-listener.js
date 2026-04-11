@@ -38,6 +38,17 @@
 	}
 
 	// ── Capture current form values ──────────────────────────────────────────
+	function getFundingType() {
+		var labels = document.querySelectorAll( '#be_ext_wr_custom_form span[data-label="title"]' );
+		for ( var i = 0; i < labels.length; i++ ) {
+			if ( labels[ i ].textContent.trim().replace( /\s*\*$/, '' ) === 'Funding Type' ) {
+				var input = labels[ i ].closest( '.be_ext_custom_form_elements' ).querySelector( 'input, select' );
+				return input ? input.value.trim() : '';
+			}
+		}
+		return '';
+	}
+
 	function captureFormData() {
 		return {
 			first_name:    getVal( 'MEDIUM_TEXT_1' ),
@@ -45,15 +56,47 @@
 			email:         getVal( 'EMAIL_ADDRESS_1' ),
 			phone:         getVal( 'PHONE_NUMBER_1' ),
 			ndis_funding:  getVal( 'DROP_DOWN_2' ),
-			plan_type:     getVal( 'DROP_DOWN_1' )
+			plan_type:     getVal( 'DROP_DOWN_1' ),
+			funding_type:  getFundingType()
 		};
+	}
+
+	// ── Check if iinsight's required fields are filled ──────────────────────
+	function requiredFieldsFilled() {
+		var container = document.getElementById( 'be_ext_wr_custom_form' );
+		if ( ! container ) return false;
+
+		// Check for iinsight validation errors
+		var errors = container.querySelectorAll( '.be_ext_form_error' );
+		for ( var i = 0; i < errors.length; i++ ) {
+			// Only count visible fields with the error class
+			var row = errors[ i ].closest( '.be_ext_custom_form_elements' );
+			if ( row && row.classList.contains( 'hidden' ) ) continue;
+			if ( errors[ i ].tagName === 'INPUT' || errors[ i ].tagName === 'SELECT' ) {
+				log.info( 'Validation error found on: ' + errors[ i ].id );
+				return false;
+			}
+		}
+
+		// Check all visible required inputs/selects have values
+		var required = container.querySelectorAll( '[required]' );
+		for ( var j = 0; j < required.length; j++ ) {
+			var row2 = required[ j ].closest( '.be_ext_custom_form_elements' );
+			if ( row2 && row2.classList.contains( 'hidden' ) ) continue;
+			if ( ! required[ j ].value.trim() ) {
+				log.info( 'Required field empty: ' + required[ j ].id );
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	// ── Build & send the notification request ────────────────────────────────
 	// Uses sendBeacon so it survives iinsight's redirect to completion_url.
 	function sendNotification( source ) {
 		if ( ! submitClicked ) {
-			log.info( 'Ignoring "' + source + '" — submit button not clicked yet (likely a conditional field change).' );
+			log.info( 'Ignoring "' + source + '" — submit button not clicked yet.' );
 			return;
 		}
 
@@ -62,11 +105,19 @@
 			return;
 		}
 
+		// Verify required fields are filled and no validation errors
+		if ( ! requiredFieldsFilled() ) {
+			log.info( 'Skipping — required fields not filled or validation errors present.' );
+			submitClicked = false;   // reset so next click can try again
+			return;
+		}
+
 		var data  = capturedData || captureFormData();
 		var email = data.email;
 
 		if ( ! email || email.indexOf( '@' ) === -1 ) {
 			log.warn( 'Skipping notification — email field is empty or invalid.' );
+			submitClicked = false;
 			return;
 		}
 
@@ -80,8 +131,9 @@
 		fd.append( 'last_name',    data.last_name );
 		fd.append( 'email',        email );
 		fd.append( 'phone',        data.phone );
-		fd.append( 'ndis_funding', data.ndis_funding );
-		fd.append( 'plan_type',    data.plan_type );
+		fd.append( 'ndis_funding',  data.ndis_funding );
+		fd.append( 'plan_type',     data.plan_type );
+		fd.append( 'funding_type',  data.funding_type );
 
 		// sendBeacon survives page navigation (redirect to completion_url)
 		if ( navigator.sendBeacon ) {

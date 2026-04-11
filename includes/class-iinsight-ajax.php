@@ -71,6 +71,7 @@ class Iinsight_Ajax {
 		$phone        = sanitize_text_field( wp_unslash( $_POST['phone']        ?? '' ) );
 		$ndis_funding = sanitize_text_field( wp_unslash( $_POST['ndis_funding'] ?? '' ) );
 		$plan_type    = sanitize_text_field( wp_unslash( $_POST['plan_type']    ?? '' ) );
+		$funding_type = sanitize_text_field( wp_unslash( $_POST['funding_type'] ?? '' ) );
 
 		if ( empty( $first ) ) {
 			return new WP_Error( 'missing_field', 'First name is required.' );
@@ -86,6 +87,7 @@ class Iinsight_Ajax {
 			'phone'        => $phone,
 			'ndis_funding' => $ndis_funding,
 			'plan_type'    => $plan_type,
+			'funding_type' => $funding_type,
 		];
 	}
 

@@ -85,20 +85,13 @@ class Iinsight_Mailer {
 	public static function placeholders( array $data ): array {
 		$first = trim( $data['first_name'] ?? '' );
 		$last  = trim( $data['last_name']  ?? '' );
-		$funding = $data['ndis_funding'] ?? '';
-		$plan    = $data['plan_type']    ?? '';
-		$funding_display = $funding;
-		if ( $funding === 'Yes' && ! empty( $plan ) ) {
-			$funding_display = "Yes — $plan";
-		}
-
 		return [
 			'{first_name}'   => $first ?: 'there',
 			'{last_name}'    => $last,
 			'{full_name}'    => trim( "$first $last" ) ?: 'Unknown',
 			'{email}'        => $data['email'] ?? 'N/A',
 			'{phone}'        => $data['phone'] ?? 'N/A',
-			'{funding_type}' => $funding_display ?: 'N/A',
+			'{funding_type}' => $data['funding_type'] ?? 'N/A',
 			'{site_name}'    => get_option( 'blogname' ),
 			'{date}'         => gmdate( 'Y-m-d' ),
 			'{time}'         => gmdate( 'H:i:s' ) . ' UTC',
